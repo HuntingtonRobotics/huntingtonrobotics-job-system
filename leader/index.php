@@ -352,7 +352,10 @@ class OneFileLoginApplication
 		} else {
 			echo "Database not working";
 		}
-        echo '<a href="' . $_SERVER['SCRIPT_NAME'] . '?action=logout">Log out</a>';
+        echo '<form method="post" action="assign.php" name="assignform">
+		
+		</form>
+		<a href="' . $_SERVER['SCRIPT_NAME'] . '?action=logout">Log out</a>';
     }
 
     /**
