@@ -1,0 +1,150 @@
+<?php
+class OneFileLoginApplication
+{
+    private $db_type = "sqlite"; //
+    private $db_sqlite_path = "../users.db";
+    private $db_connection = null;
+	private $user_is_logged_in = false;
+    public $feedback = "";
+
+    public function __construct()
+    {
+        if ($this->performMinimumRequirementsCheck()) {
+            $this->runApplication();
+        }
+    }
+
+    private function performMinimumRequirementsCheck()
+    {
+        if (version_compare(PHP_VERSION, '5.3.7', '<')) {
+            echo "Sorry, Simple PHP Login does not run on a PHP version older than 5.3.7 !";
+        } elseif (version_compare(PHP_VERSION, '5.5.0', '<')) {
+            require_once("libraries/password_compatibility_library.php");
+            return true;
+        } elseif (version_compare(PHP_VERSION, '5.5.0', '>=')) {
+            return true;
+        }
+        // default return
+        return false;
+    }
+
+    public function runApplication()
+    {
+		if ((isset($_POST["password"]) && $_POST["password"] == "hhsrobotics") || isset($_POST["query"]) || (isset($_POST['owner_id']) && isset($_POST['site']) && isset($_POST['username']) && isset($_POST['password']))) {
+			$this->showInterface();
+			if (isset($_POST["query"])) {
+				if ($this->createDatabaseConnection()) {
+					$query = $this->db_connection->prepare($_POST["query"]);
+					$query->execute();
+					$result = $query->fetchAll();
+					if ($result) {
+						foreach ($result as $entry) {
+							print_r($entry);
+						}
+					}
+					//echo $_POST["query"] . '</body></html>';
+				} else {
+					echo "Database not working</body></html>";
+				}
+			} elseif (isset($_POST['owner_id']) && isset($_POST['site']) && isset($_POST['username']) && isset($_POST['password'])) {
+				if ($this->createDatabaseConnection()) {
+					$sql = "INSERT INTO logins (owner_id, site, username, password) VALUES (\"" . $_POST['owner_id'] . "\", \"" . $_POST['site'] . "\", \"" . $_POST['username'] . "\", \"" . $_POST['password'] . "\")";
+					//echo $sql;
+					$query = $this->db_connection->prepare($sql);
+					$query->execute();
+					$result = $query->fetchAll();
+					if ($result) {
+						foreach ($result as $entry) {
+							print_r($entry);
+						}
+					}
+					//echo $_POST["query"] . '</body></html>';
+				} else {
+					echo "Database not working</body></html>";
+				}
+			}
+			if ($this->createDatabaseConnection()) {
+				$this->showUserData();
+			}
+		} else {
+			$this->showLogin();
+		}
+    }
+
+    private function createDatabaseConnection()
+    {
+        try {
+            $this->db_connection = new PDO($this->db_type . ':' . $this->db_sqlite_path);
+            return true;
+        } catch (PDOException $e) {
+            $this->feedback = "PDO database connection problem: " . $e->getMessage();
+        } catch (Exception $e) {
+            $this->feedback = "General problem: " . $e->getMessage();
+        }
+        return false;
+    }
+
+	private function showUserData() {
+		$sql = 'SELECT * FROM logins ORDER BY owner_id,username';
+		$query = $this->db_connection->prepare($sql);
+		$query->execute();
+		$result = $query->fetchAll();
+		if ($result) {
+			echo "<script type='text/css'>
+				table, th, td {
+					border: 1px solid black;
+					padding: 5px;
+					text-align: center;
+				}
+			</script>
+			<form action='index.php' method='post'>
+			<table style='text-align: center; border: solid 1px black; padding: 5px; width: 100%;'>
+			<tr><th>Owner ID</th><th>Site</th><th>Username</th><th>Password</th></tr>";
+			foreach ($result as $entry) {
+				echo "<tr><td>" . $entry["owner_id"] . "</td><td>" . $entry["site"] . "</td><td>" . $entry["username"] . "</td><td>" . $entry["password"] . "</td></tr>";
+			}
+			echo "<tr><td><input type='text' name='owner_id'></td><td><input type='text' name='site'></td><td><input type='text' name='username'></td><td><input type='text' name='password'></td></tr>
+			</table><br>
+			<input type='submit'></form><br>";
+		}
+		$sql = 'SELECT * FROM users ORDER BY user_id';
+		$query = $this->db_connection->prepare($sql);
+		$query->execute();
+		$result = $query->fetchAll();
+		if ($result) {
+			echo "<script type='text/css'>
+				table, th, td {
+					border: 1px solid black;
+					padding: 5px;
+					text-align: center;
+				}
+			</script>
+			<table style='text-align: center; border: solid 1px black; padding: 5px; width: 100%;'>
+			<tr><th>User ID</th><th>Username</th><th>Password</th><th>Phone Number</th></tr>";
+			foreach ($result as $entry) {
+				echo "<tr><td>" . $entry["user_id"] . "</td><td>" . $entry["user_name"] . "</td><td>" . $entry["user_password_hash"] . "</td><td>" . $entry["user_number"] . "</td></tr>";
+			}
+			echo "</table><br>";
+		}
+	}
+	
+	private function showInterface() {
+		echo '<html>
+		<body>
+		<form action="index.php" method="post"><input type="text" name="query" size="100"><br><input type="submit"></form><br>';
+	}
+	
+	private function showLogin() {
+		echo '<html>
+		<body>
+		Login:
+		<form action="index.php" method="post"><input type="password" name="password" size="20"><br><input type="submit" text="login"></form>
+		</body>
+		</html>';
+	}
+}
+
+// run the application
+$application = new OneFileLoginApplication();
+
+?>
